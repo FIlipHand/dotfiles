@@ -1,3 +1,4 @@
+vim.o.background = "dark"
 vim.o.relativenumber = true
 vim.o.number = true
 -- vim.o.wrap = false
@@ -10,10 +11,16 @@ vim.o.swapfile = false
 vim.o.winborder = "rounded"
 vim.opt.list = true
 vim.opt.termguicolors = true
-vim.opt.listchars = {
-  space = "·",
-  tab = "󰌒 ",
-  trail = "·",
+vim.g.clipboard = {
+    name = "OSC 52",
+    copy = {
+        ["+"] = require("vim.ui.clipboard.osc52").copy("+"),
+        ["*"] = require("vim.ui.clipboard.osc52").copy("*"),
+    },
+    paste = {
+        ["+"] = require("vim.ui.clipboard.osc52").paste("+"),
+        ["*"] = require("vim.ui.clipboard.osc52").paste("*"),
+    },
 }
 vim.opt.clipboard = "unnamedplus"
 
@@ -45,7 +52,12 @@ require('mini.icons').setup()
 MiniIcons.mock_nvim_web_devicons()
 
 require("bufferline").setup()
-require("nvim-tree").setup()
+require("nvim-tree").setup({
+    filters = {
+        dotfiles = false,
+        git_ignored = false,
+    },
+})
 
 local builtin = require('telescope.builtin')
 vim.keymap.set('n', '<leader>ff', builtin.find_files, { desc = 'Telescope find files' })
@@ -102,23 +114,23 @@ vim.keymap.set('i', '<S-Tab>', function()
   end
 end, { expr = true })
 require('mini.comment').setup()
--- Ctrl+/ to toggle comment in normal mode
-vim.keymap.set('n', '<C-_>', function()
+-- Ctrl+/ to toggle comment (both <C-_> for traditional terminals and <C-/> for Kitty)
+local function comment_line()
     require('mini.comment').toggle_lines(vim.fn.line('.'), vim.fn.line('.'))
-end, { desc = 'Toggle comment' })
-
--- Ctrl+/ to toggle comment in visual mode
-vim.keymap.set('v', '<C-_>', function()
+end
+local function comment_visual()
     local start_line = vim.fn.line('v')
     local end_line = vim.fn.line('.')
-    -- Ensure start_line is always less than or equal to end_line
     if start_line > end_line then
         start_line, end_line = end_line, start_line
     end
     require('mini.comment').toggle_lines(start_line, end_line)
-end, { desc = 'Toggle comment' })
--- Ctrl+/ to toggle comment in insert mode
-vim.keymap.set('i', '<C-_>', '<Esc>:lua require("mini.comment").toggle_lines(vim.fn.line("."), vim.fn.line("."))<CR>a', { desc = 'Toggle comment' })
+end
+for _, lhs in ipairs({ '<C-_>', '<C-/>' }) do
+    vim.keymap.set('n', lhs, comment_line, { desc = 'Toggle comment' })
+    vim.keymap.set('v', lhs, comment_visual, { desc = 'Toggle comment' })
+    vim.keymap.set('i', lhs, '<Esc>:lua require("mini.comment").toggle_lines(vim.fn.line("."), vim.fn.line("."))<CR>a', { desc = 'Toggle comment' })
+end
 
 require('mini.pairs').setup()
 
@@ -173,7 +185,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 
 require("mason").setup()
 
-vim.lsp.enable({'clangd', 'basedpyright', 'bash-language-server'})
+vim.lsp.enable({'clangd', 'pyrefly', 'bash-language-server', 'typos-lsp'})
 
 require("gruvbox").setup({
     italic = {
