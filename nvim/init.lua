@@ -42,7 +42,48 @@ vim.pack.add({
     { src = "https://github.com/nvim-tree/nvim-tree.lua" },
     { src = "https://github.com/nvim-mini/mini.icons" },
     { src = "https://github.com/lewis6991/gitsigns.nvim" },
+    { src = "https://github.com/akinsho/toggleterm.nvim"},
 })
+
+require('toggleterm').setup()
+
+local Terminal = require("toggleterm.terminal").Terminal
+
+-- Reusable terminal instances
+local float_term = Terminal:new({ direction = "float", hidden = true })
+local horizontal_term = Terminal:new({ direction = "horizontal", hidden = true })
+local vertical_term = Terminal:new({ direction = "vertical", hidden = true })
+
+local function toggle_float() float_term:toggle() end
+local function toggle_horizontal() horizontal_term:toggle() end
+local function toggle_vertical() vertical_term:toggle() end
+
+local map = vim.keymap.set
+local opts = { noremap = true, silent = true }
+
+-- Toggle terminals in different layouts
+map("n", "<leader>tf", toggle_float, vim.tbl_extend("force", opts, { desc = "Toggle floating terminal" }))
+map("n", "<leader>th", toggle_horizontal, vim.tbl_extend("force", opts, { desc = "Toggle horizontal terminal" }))
+map("n", "<leader>tv", toggle_vertical, vim.tbl_extend("force", opts, { desc = "Toggle vertical terminal" }))
+
+-- Generic toggle (last used direction / default float)
+map("n", "<leader>tt", "<cmd>ToggleTerm<CR>", vim.tbl_extend("force", opts, { desc = "Toggle terminal" }))
+
+-- Quit/kill all open terminals
+map("n", "<leader>tq", "<cmd>ToggleTermToggleAll<CR>", vim.tbl_extend("force", opts, { desc = "Close all terminals" }))
+
+function _G.set_terminal_keymaps()
+  local topts = { buffer = 0 }
+  vim.keymap.set("t", "<esc>", [[<C-\><C-n>]], topts)          -- Esc to leave terminal-insert mode
+  vim.keymap.set("t", "jk", [[<C-\><C-n>]], topts)               -- alt escape
+  vim.keymap.set("t", "<C-h>", [[<Cmd>wincmd h<CR>]], topts)
+  vim.keymap.set("t", "<C-j>", [[<Cmd>wincmd j<CR>]], topts)
+  vim.keymap.set("t", "<C-k>", [[<Cmd>wincmd k<CR>]], topts)
+  vim.keymap.set("t", "<C-l>", [[<Cmd>wincmd l<CR>]], topts)
+  vim.keymap.set("t", "<C-q>", [[<Cmd>close<CR>]], topts)        -- quit this terminal window
+end
+
+vim.cmd("autocmd! TermOpen term://*toggleterm#* lua set_terminal_keymaps()")
 
 local gitapi = require("gitsigns")
 vim.keymap.set('n', '<leader>gs', gitapi.preview_hunk, { desc = 'Gitsigns preview hunk' })
@@ -185,7 +226,7 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 
 require("mason").setup()
 
-vim.lsp.enable({'clangd', 'pyrefly', 'bash-language-server', 'typos-lsp'})
+vim.lsp.enable({'clangd', 'bash-language-server', 'typos-lsp'})
 
 require("gruvbox").setup({
     italic = {
