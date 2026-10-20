@@ -42,7 +42,7 @@ vim.pack.add({
     { src = "https://github.com/nvim-tree/nvim-tree.lua" },
     { src = "https://github.com/nvim-mini/mini.icons" },
     { src = "https://github.com/lewis6991/gitsigns.nvim" },
-    { src = "https://github.com/akinsho/toggleterm.nvim"},
+    { src = "https://github.com/akinsho/toggleterm.nvim" }
 })
 
 require('toggleterm').setup()
@@ -88,6 +88,22 @@ vim.cmd("autocmd! TermOpen term://*toggleterm#* lua set_terminal_keymaps()")
 local gitapi = require("gitsigns")
 vim.keymap.set('n', '<leader>gs', gitapi.preview_hunk, { desc = 'Gitsigns preview hunk' })
 vim.keymap.set('n', '<leader>gr', gitapi.reset_hunk, { desc = 'Gitsigns reset buffer' })
+
+-- While a hunk preview is open, n/p jump to the next/previous hunk (the
+-- preview follows). Otherwise they keep their normal search/paste behaviour.
+local function hunk_preview_open()
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.w[win].gitsigns_preview == 'hunk' then return true end
+  end
+  return false
+end
+for key, direction in pairs({ n = 'next', p = 'prev' }) do
+  vim.keymap.set('n', key, function()
+    if not hunk_preview_open() then return key end
+    vim.schedule(function() gitapi.nav_hunk(direction, { greedy = false }) end)
+    return ''
+  end, { expr = true, desc = 'Next/prev hunk when previewing, else ' .. key })
+end
 
 require('mini.icons').setup()
 MiniIcons.mock_nvim_web_devicons()
@@ -199,7 +215,7 @@ vim.api.nvim_create_autocmd('CompleteDone', {
     end
   end,
 })
--- there is a small bug here, where when importing a function in pytohn, it inserts automatically ()
+-- there is a small bug here, where when importing a function in python, it inserts automatically ()
 
 require('mini.surround').setup()
 require('trouble').setup()
@@ -218,6 +234,7 @@ end, { desc = 'Toggle diagnostics' })
 -- Subtle warning colors (must be after colorscheme)
 vim.api.nvim_create_autocmd("ColorScheme", {
   callback = function()
+    if vim.o.background ~= "dark" then return end
     vim.api.nvim_set_hl(0, "DiagnosticWarn", { fg = "#7c6f4e" })
     vim.api.nvim_set_hl(0, "DiagnosticVirtualTextWarn", { fg = "#5c5238" })
     vim.api.nvim_set_hl(0, "DiagnosticUnderlineWarn", { sp = "#5c5238", undercurl = true })
@@ -226,7 +243,8 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 
 require("mason").setup()
 
-vim.lsp.enable({'clangd', 'bash-language-server', 'typos-lsp'})
+vim.lsp.enable({'clangd', 'bashls', 'typos_lsp', 'basedpyright'})
+vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { desc = 'Go to definition' })
 
 require("gruvbox").setup({
     italic = {
@@ -240,3 +258,9 @@ require("gruvbox").setup({
     },
 })
 vim.cmd("colorscheme gruvbox")
+
+-- Toggle between dark and light gruvbox
+vim.keymap.set('n', '<leader>bg', function()
+  vim.o.background = vim.o.background == "dark" and "light" or "dark"
+  vim.cmd("colorscheme gruvbox")
+end, { desc = 'Toggle dark/light background' })
